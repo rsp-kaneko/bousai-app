@@ -8,9 +8,6 @@ import {
   Card,
   CardContent,
   Grid,
-  List,
-  ListItemButton,
-  Divider,
   Chip,
   CircularProgress,
   IconButton,
@@ -22,7 +19,11 @@ import {
   AccordionDetails,
   Switch,
   FormControlLabel,
+  Dialog,
+  DialogContent,
 } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
 import {
   Refresh as RefreshIcon,
   WarningAmber as WarningAmberIcon,
@@ -30,14 +31,15 @@ import {
   Info as InfoIcon,
   ExpandMore as ExpandMoreIcon,
   TravelExplore as TravelExploreIcon,
-  AccessTime as AccessTimeIcon,
   Sensors as SensorsIcon,
   Map as MapIcon,
+  List as ListIcon,
 } from '@mui/icons-material'
 import useBousai from './Hooks/useBousai'
-import type { ObservationPoint } from './api/types'
+import type { BousaiData, ObservationPoint } from './api/types'
 import { JapanMap } from './components/JapanMap'
 import prefectureMap from './api/prefectureMap.json'
+import RenderHistoryAside from './components/Aside/RenderHistoryAside'
 
 // 震度値をわかりやすい表記に変換する関数
 const getScaleString = (scale: number | null | undefined): string => {
@@ -131,6 +133,10 @@ function App() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true)
   const [limit, setLimit] = useState<number>(15)
+  const [historyOpen, setHistoryOpen] = useState<boolean>(false)
+
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   // 初回ロード
   useEffect(() => {
@@ -147,7 +153,7 @@ function App() {
   }, [autoRefresh, getBousaiDatas, limit])
 
   // 地震データのみをフィルタリング（感知情報 5610 などを除外するか、適切にフィルタ）
-  const earthquakeList = useMemo(() => {
+  const earthquakeList: BousaiData[] = useMemo(() => {
     return bousaiDatas.filter((data) => data.code === 551)
   }, [bousaiDatas])
 
@@ -232,6 +238,16 @@ function App() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1 }}>
             リアルタイム地震情報ダッシュボード
           </Typography>
+          {isMobile && (
+            <Button
+              color="inherit"
+              startIcon={<ListIcon />}
+              onClick={() => setHistoryOpen(true)}
+              sx={{ mr: 2, fontWeight: 'bold' }}
+            >
+              履歴
+            </Button>
+          )}
           <FormControlLabel
             control={
               <Switch
@@ -257,118 +273,23 @@ function App() {
         )}
 
         <Grid container spacing={3}>
-          {/* 左カラム: 地震情報履歴リスト */}
-          <Grid size={{ xs: 12, md: 4 }}>
-            <Paper elevation={2} sx={{ borderRadius: 3, overflow: 'hidden' }}>
-              <Box sx={{ p: 2, bgcolor: '#334155', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                  地震履歴
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                  <Button
-                    size="small"
-                    variant={limit === 15 ? "contained" : "text"}
-                    sx={{ color: limit === 15 ? 'white' : '#cbd5e1', bgcolor: limit === 15 ? '#475569' : 'transparent', minWidth: 40 }}
-                    onClick={() => setLimit(15)}
-                  >
-                    15件
-                  </Button>
-                  <Button
-                    size="small"
-                    variant={limit === 30 ? "contained" : "text"}
-                    sx={{ color: limit === 30 ? 'white' : '#cbd5e1', bgcolor: limit === 30 ? '#475569' : 'transparent', minWidth: 40 }}
-                    onClick={() => setLimit(30)}
-                  >
-                    30件
-                  </Button>
-                </Box>
-              </Box>
-
-              {loading && earthquakeList.length === 0 ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 5 }}>
-                  <CircularProgress />
-                </Box>
-              ) : earthquakeList.length === 0 ? (
-                <Box sx={{ p: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">地震情報が見つかりません</Typography>
-                </Box>
-              ) : (
-                <List sx={{ p: 0, maxHeight: 'calc(100vh - 220px)', overflowY: 'auto' }}>
-                  {earthquakeList.map((data, index) => {
-                    const eq = data.earthquake
-                    const isSelected = selectedId === data._id.$oid || (!selectedId && index === 0)
-                    const scaleColor = getScaleColor(eq?.maxScale)
-
-                    return (
-                      <div key={data._id.$oid}>
-                        {index > 0 && <Divider />}
-                        <ListItemButton
-                          selected={isSelected}
-                          onClick={() => setSelectedId(data._id.$oid)}
-                          sx={{
-                            py: 2,
-                            px: 3,
-                            borderLeft: isSelected ? `6px solid ${scaleColor}` : '6px solid transparent',
-                            '&.Mui-selected': {
-                              bgcolor: 'rgba(30, 41, 59, 0.08)',
-                              '&:hover': {
-                                bgcolor: 'rgba(30, 41, 59, 0.12)',
-                              }
-                            }
-                          }}
-                        >
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            {/* 震度サークル */}
-                            <Box
-                              sx={{
-                                width: 44,
-                                height: 44,
-                                borderRadius: '50%',
-                                bgcolor: scaleColor,
-                                color: 'white',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                mr: 2,
-                                flexShrink: 0,
-                                boxShadow: 1
-                              }}
-                            >
-                              <Typography variant="caption" sx={{ fontSize: '0.65rem', lineHeight: 1 }}>
-                                震度
-                              </Typography>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: '1.1rem', lineHeight: 1.1 }}>
-                                {getScaleString(eq?.maxScale)}
-                              </Typography>
-                            </Box>
-
-                            {/* 震源地・時間情報 */}
-                            <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {eq?.hypocenter?.name || '震源情報なし'}
-                              </Typography>
-                              <Box sx={{ display: 'flex', flexDirection: 'column', mt: 0.5, gap: 0.2 }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-                                  <AccessTimeIcon sx={{ fontSize: '0.9rem', mr: 0.5 }} />
-                                  {eq?.time || data.time}
-                                </Typography>
-                                {eq?.domesticTsunami && eq.domesticTsunami !== 'None' && (
-                                  <Typography variant="caption" color="error.main" sx={{ fontWeight: 'bold' }}>
-                                    津波情報あり
-                                  </Typography>
-                                )}
-                              </Box>
-                            </Box>
-                          </Box>
-                        </ListItemButton>
-                      </div>
-                    )
-                  })}
-                </List>
-              )}
-            </Paper>
-          </Grid>
+          {/* 左カラム: 地震情報履歴リスト（PCサイズのみ表示） */}
+          {!isMobile && (
+            <Grid size={{ md: 4 }}>
+              <RenderHistoryAside
+                isDialog={false}
+                limit={limit}
+                setLimit={setLimit}
+                loading={loading}
+                earthquakeList={earthquakeList}
+                selectedId={selectedId}
+                setSelectedId={setSelectedId}
+                getScaleColor={getScaleColor}
+                getScaleString={getScaleString}
+                setHistoryOpen={setHistoryOpen}
+              />
+            </Grid>
+          )}
 
           {/* 右カラム: 詳細表示 */}
           <Grid size={{ xs: 12, md: 8 }}>
@@ -580,6 +501,33 @@ function App() {
           </Grid>
         </Grid>
       </Container>
+
+      <Dialog
+        open={historyOpen && isMobile}
+        onClose={() => setHistoryOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{
+          paper: {
+            sx: { borderRadius: 3, overflow: 'hidden' }
+          }
+        }}
+      >
+        <DialogContent sx={{ p: 0 }}>
+          <RenderHistoryAside
+            isDialog={true}
+            limit={limit}
+            setLimit={setLimit}
+            loading={loading}
+            earthquakeList={earthquakeList}
+            selectedId={selectedId}
+            setSelectedId={setSelectedId}
+            getScaleColor={getScaleColor}
+            getScaleString={getScaleString}
+            setHistoryOpen={setHistoryOpen}
+          />
+        </DialogContent>
+      </Dialog>
     </Box>
   )
 }
