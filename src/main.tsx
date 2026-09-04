@@ -11,12 +11,19 @@ import '@fontsource/roboto/300.css'
 import '@fontsource/roboto/400.css'
 import '@fontsource/roboto/500.css'
 import '@fontsource/roboto/700.css'
+import RootContext from './contexts/RootContext.ts'
+
+const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || ""
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <App />
-    </ThemeProvider>
+    <RootContext.Provider value={{
+      GOOGLE_API_KEY
+    }}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <App />
+      </ThemeProvider>
+    </RootContext.Provider>
   </StrictMode>,
 )

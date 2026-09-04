@@ -13,6 +13,8 @@ const useBousai = () => {
         axiosClient.get<BousaiData[]>("/human-readable?limit=" + limit)
             .then((response) => {
                 setBousaiDatas(response.data)
+                console.log("=== [SUCCESS] get_result: https://api.p2pquake.net/v1/human-readable?limit="+limit+" ===")
+                console.log(response.data)
             })
             .catch((err) => {
                 console.error(err)

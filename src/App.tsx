@@ -36,10 +36,11 @@ import {
   List as ListIcon,
 } from '@mui/icons-material'
 import useBousai from './Hooks/useBousai'
-import type { BousaiData, ObservationPoint } from './api/types'
+import type { BousaiData, ObservationPoint, ShityosonText } from './api/types'
 import { JapanMap } from './components/JapanMap'
 import prefectureMap from './api/prefectureMap.json'
 import RenderHistoryAside from './components/Aside/RenderHistoryAside'
+import AIsearchDialog from './components/AIsearchDialog'
 
 // 震度値をわかりやすい表記に変換する関数
 const getScaleString = (scale: number | null | undefined): string => {
@@ -134,6 +135,8 @@ function App() {
   const [autoRefresh, setAutoRefresh] = useState<boolean>(true)
   const [limit, setLimit] = useState<number>(15)
   const [historyOpen, setHistoryOpen] = useState<boolean>(false)
+  const [aiSearchOpen, setAiSearchOpen] = useState<boolean>(false)
+  const [shityoson, setShityoson] = useState<ShityosonText | null>(null)
 
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
@@ -230,12 +233,17 @@ function App() {
     getBousaiDatas(limit)
   }, [getBousaiDatas, limit])
 
+  const onClickOpenAIsearchDialog = (shityoson: ShityosonText) => {
+    setShityoson(shityoson)
+    setAiSearchOpen(true)
+  }
+
   return (
     <Box sx={{ flexGrow: 1, minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="sticky" sx={{ bgcolor: '#1e293b', boxShadow: 3 }}>
         <Toolbar>
           <SensorsIcon sx={{ mr: 2, color: '#f43f5e' }} />
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1 }}>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold', letterSpacing: 1, textAlign: "left" }}>
             リアルタイム地震情報ダッシュボード
           </Typography>
           {isMobile && (
@@ -424,7 +432,7 @@ function App() {
                   <Box sx={{ p: 2, bgcolor: '#475569', color: 'white', display: 'flex', alignItems: 'center' }}>
                     <TravelExploreIcon sx={{ mr: 1 }} />
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      各地の震度（観測点情報）
+                      各地の震度（観測点情報）とAI詳細データ
                     </Typography>
                   </Box>
                   <CardContent sx={{ p: 3 }}>
@@ -466,20 +474,21 @@ function App() {
                             <AccordionDetails sx={{ p: 2, bgcolor: 'white' }}>
                               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                                 {list.map((point, pIndex) => (
-                                  <Chip
-                                    key={`${point.addr}-${pIndex}`}
-                                    label={`${point.addr} (震度${getScaleString(point.scale)})`}
-                                    size="small"
-                                    variant="outlined"
-                                    sx={{
-                                      borderColor: getScaleColor(point.scale),
-                                      color: getScaleColor(point.scale),
-                                      fontWeight: '500',
-                                      '&:hover': {
-                                        bgcolor: 'rgba(0, 0, 0, 0.02)'
-                                      }
-                                    }}
-                                  />
+                                  <IconButton key={`${point.addr}-${pIndex}`} onClick={() => onClickOpenAIsearchDialog({pref: pref, munic: point.addr})}>
+                                    <Chip
+                                      label={`${point.addr} (震度${getScaleString(point.scale)})`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{
+                                        borderColor: getScaleColor(point.scale),
+                                        color: getScaleColor(point.scale),
+                                        fontWeight: '500',
+                                        '&:hover': {
+                                          bgcolor: 'rgba(0, 0, 0, 0.02)'
+                                        }
+                                      }}
+                                    />
+                                  </IconButton>
                                 ))}
                               </Box>
                             </AccordionDetails>
@@ -501,6 +510,12 @@ function App() {
           </Grid>
         </Grid>
       </Container>
+
+      <AIsearchDialog
+        open={aiSearchOpen}
+        onClose={() => setAiSearchOpen(false)}
+        shityoson={shityoson}
+      />
 
       <Dialog
         open={historyOpen && isMobile}
